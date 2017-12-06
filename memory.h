@@ -26,6 +26,16 @@ enum {
 /* TODO: Structure of an entry in the page map */
 typedef struct {
     // design here
+  node_t node; // for queues
+  uint32_t vaddr;  // virtual address of start of page
+  uint32_t swap_loc;  // location
+  uint32_t swap_size;
+  bool_t is_pinned;
+  bool_t is_available;
+  bool_t is_dirty; // if true, write to disk before evicting from memory
+  int pid; // owner of page
+  uint32_t index; // index within the page_map array
+  uint32_t *page_directory; // location of page directory memory
 } page_map_entry_t;
 
 

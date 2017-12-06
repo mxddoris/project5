@@ -53,13 +53,53 @@ void insert_page_table_entry( uint32_t *table, uint32_t vaddr, uint32_t paddr,
  * Marks page as pinned if pinned == TRUE.
  * Swap out a page if no space is available.
  */
+ 
+uint32_t find_free_page(page_map_entry_t* page_map) {
+	int i;
+	for (i = 0; i < PAGEABLE_PAGES; ++i)
+	{
+		if(page_map[i].is_available==TRUE)
+		{
+			break;
+		}
+	}
+}
+ 
 int page_alloc( int pinned ) {
  
     // code here
-
-
-   
+	uint32_t free_index;
+	// find an availabe physical page
+	free_index = find_free_page();
+	
+	
+	if(free_index>=PAGEABLE_PAGES)
+	{
+		free_index=page_replacement_policy();//select a victim
+		page_swap_out(free_index);
+	}
+	
+	
+	// initialize a physical page (wirte infomation to page_map)
+ 	page_map[free_index].is_pinned=(pinned==TRUE)?TRUE:FALSE;
+ 	if(pinned==FALSE)//pinned page need not to be in the swap queue
+ 		queue_put(page_queue,(node_t*)&page_map[free_index]);
+ 	page_map[free_index].is_available=FALSE;
+ 	page_map[free_index].pid=current_running->pid;
+ 	page_map[free_index].page_directory=current_running->page_directory;
+ 	page_map[free_index].swap_loc=current_running->swap_loc;
+  	page_map[free_index].vaddr=current_running->fault_addr&PE_BASE_ADDR_MASK;
+	//calculate real sectors to swap
+	int near_sectors=current_running->swap_size % SECTORS_PER_PAGE;
+	int need_sector_num=(current_running->fault_addr - PROCESS_START) / SECTOR_SIZE;
+	if(current_running->swap_size- near_sectors <= need_sector_num)
+		page_map[free_index].swap_size=near_sectors;
+	else
+		page_map[free_index].swap_size=SECTORS_PER_PAGE;
+	// zero-out the process page
+	bzero((char*)page_addr(free_index),PAGE_SIZE);
     ASSERT( free_index < PAGEABLE_PAGES );
+	return free_index;
 
 }
 
